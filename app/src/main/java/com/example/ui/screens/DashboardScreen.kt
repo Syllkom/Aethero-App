@@ -41,6 +41,8 @@ fun DashboardScreen(viewModel: MainViewModel, navController: NavController) {
     val plugins by viewModel.plugins.collectAsState()
     val pluginCount by viewModel.pluginCount.collectAsState()
     val commandCount by viewModel.commandCount.collectAsState()
+    val githubActivity by viewModel.githubActivity.collectAsState()
+    val lastSyncTime by viewModel.lastSyncTime.collectAsState()
 
     LazyColumn(
         modifier = Modifier
@@ -52,11 +54,11 @@ fun DashboardScreen(viewModel: MainViewModel, navController: NavController) {
         item { Spacer(modifier = Modifier.height(24.dp)) }
         item { HeaderArea() }
         item { Spacer(modifier = Modifier.height(24.dp)) }
-        item { RepoStatusCard() }
+        item { RepoStatusCard(onSync = { viewModel.forceSync() }, lastSyncTime = lastSyncTime) }
         item { Spacer(modifier = Modifier.height(16.dp)) }
         item { StatsRow(pluginCount, commandCount) }
         item { Spacer(modifier = Modifier.height(24.dp)) }
-        item { ActivityChart(pluginCount = pluginCount) }
+        item { ActivityChart(githubActivity = githubActivity) }
         item { Spacer(modifier = Modifier.height(24.dp)) }
         item {
             Row(
@@ -118,7 +120,7 @@ fun HeaderArea() {
 }
 
 @Composable
-fun RepoStatusCard() {
+fun RepoStatusCard(onSync: () -> Unit, lastSyncTime: String) {
     Surface(
         color = SurfaceDark,
         shape = RoundedCornerShape(16.dp),
@@ -163,10 +165,10 @@ fun RepoStatusCard() {
             ) {
                 Column {
                     Text(text = "Última sincronización", color = TextSecondary, fontSize = 12.sp)
-                    Text(text = "Hoy, 08:42 AM", color = Accent, fontSize = 14.sp)
+                    Text(text = lastSyncTime, color = Accent, fontSize = 14.sp)
                 }
                 IconButton(
-                    onClick = { },
+                    onClick = onSync,
                     modifier = Modifier.background(SurfaceVariantDark, RoundedCornerShape(50))
                 ) {
                     Icon(TablerIcons.Refresh, contentDescription = "Sync", tint = Accent)
@@ -207,7 +209,7 @@ fun StatCard(modifier: Modifier = Modifier, title: String, count: Int, trend: St
 }
 
 @Composable
-fun ActivityChart(pluginCount: Int) {
+fun ActivityChart(githubActivity: List<Int>) {
     var selectedIndex by remember { mutableStateOf<Int?>(null) }
     
     Surface(
@@ -229,7 +231,7 @@ fun ActivityChart(pluginCount: Int) {
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
-                        text = "Plugins Añadidos",
+                        text = "Commits (repo)",
                         color = TextSecondary,
                         fontSize = 12.sp,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -238,6 +240,10 @@ fun ActivityChart(pluginCount: Int) {
             }
             Spacer(modifier = Modifier.height(16.dp))
             Box(modifier = Modifier.fillMaxSize()) {
+                val dataPoints = remember(githubActivity) {
+                    val maxVal = githubActivity.maxOrNull()?.coerceAtLeast(1) ?: 1
+                    githubActivity.map { (it.toFloat() / maxVal).coerceIn(0.1f, 1.0f) }
+                }
                 Canvas(
                     modifier = Modifier
                         .fillMaxSize()
@@ -257,11 +263,6 @@ fun ActivityChart(pluginCount: Int) {
                     val path = Path()
                     val width = size.width
                     val height = size.height
-                    
-                    // Generar puntos dinámicos basados en pluginCount para simular actividad
-                    val seed = (pluginCount * 7).toFloat()
-                    val baseData = listOf(0.2f, 0.5f, 0.3f, 0.8f, 0.4f, 0.9f, 0.6f)
-                    val dataPoints = baseData.map { (it * (1 + seed % 10 / 10)).coerceIn(0.1f, 1.0f) }
                     
                     val stepX = width / (dataPoints.size - 1)
                     
@@ -319,12 +320,7 @@ fun ActivityChart(pluginCount: Int) {
                 
                 // Show tooltip overlay when point is selected
                 selectedIndex?.let { index ->
-                    val seed = (pluginCount * 7).toFloat()
-                    val baseData = listOf(0.2f, 0.5f, 0.3f, 0.8f, 0.4f, 0.9f, 0.6f)
-                    val dataPoints = baseData.map { (it * (1 + seed % 10 / 10)).coerceIn(0.1f, 1.0f) }
-                    
-                    // Calculate real value represented
-                    val actualValue = (dataPoints[index] * 10).toInt() + 1
+                    val actualValue = githubActivity.getOrNull(index) ?: 0
                     val daysAgo = 6 - index
                     val dayLabel = if (daysAgo == 0) "Hoy" else "Hace $daysAgo d"
                     
@@ -334,7 +330,7 @@ fun ActivityChart(pluginCount: Int) {
                         modifier = Modifier.align(Alignment.TopCenter)
                     ) {
                         Text(
-                            text = "$dayLabel: $actualValue plugins",
+                            text = "$dayLabel: $actualValue commits",
                             color = BackgrounDark,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,

@@ -1,7 +1,12 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -32,7 +37,9 @@ fun PluginsScreen(viewModel: MainViewModel, navController: NavController) {
     var selectedCategory by remember { mutableStateOf("Todos") }
     var selectedPluginId by remember { mutableStateOf<String?>(null) }
     
-    val categories = listOf("Todos", "Owner", "Utility", "Fun", "General")
+    val categories = remember(plugins) {
+        listOf("Todos") + plugins.map { it.category }.distinct().filter { it.isNotBlank() }.sorted()
+    }
 
     if (selectedPluginId != null) {
         val plugin = plugins.find { it.id == selectedPluginId }
@@ -116,19 +123,25 @@ fun PluginsScreen(viewModel: MainViewModel, navController: NavController) {
             }
             Spacer(modifier = Modifier.height(16.dp))
             
-            val filteredPlugins = plugins.filter { 
-                (selectedCategory == "Todos" || it.category.equals(selectedCategory, ignoreCase = true)) &&
-                it.name.contains(searchQuery, ignoreCase = true)
+            val filteredPlugins = remember(plugins, selectedCategory, searchQuery) {
+                plugins.filter { 
+                    (selectedCategory == "Todos" || it.category.equals(selectedCategory, ignoreCase = true)) &&
+                    it.name.contains(searchQuery, ignoreCase = true)
+                }
             }
             
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
                 items(filteredPlugins) { plugin ->
                     PluginListItem(
                         plugin = plugin,
                         onClick = { selectedPluginId = plugin.id },
                         onToggle = { isActive -> viewModel.togglePluginActive(plugin, isActive) }
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
                 }
             }
         }
@@ -142,32 +155,25 @@ fun PluginListItem(plugin: PluginEntity, onClick: () -> Unit, onToggle: (Boolean
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(1.dp, SurfaceVariantDark.copy(alpha = 0.5f)),
         shadowElevation = 8.dp,
-        modifier = Modifier.fillMaxWidth().clickable { onClick() }
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .animateContentSize()
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+        Column(modifier = Modifier.padding(12.dp)) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(SurfaceVariantDark),
+                contentAlignment = Alignment.Center
             ) {
-                Row(modifier = Modifier.weight(1f)) {
-                    Box(
-                        modifier = Modifier
-                            .size(50.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(SurfaceVariantDark),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(text = "JS", color = Accent, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text(text = plugin.name, color = Accent, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(text = plugin.description, color = TextSecondary, fontSize = 12.sp, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                    }
-                }
+                Text(text = "JS", color = Accent, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = plugin.name, color = Accent, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = plugin.description, color = TextSecondary, fontSize = 11.sp, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.height(32.dp))
             Spacer(modifier = Modifier.height(12.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -176,14 +182,16 @@ fun PluginListItem(plugin: PluginEntity, onClick: () -> Unit, onToggle: (Boolean
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Surface(color = SurfaceVariantDark, shape = RoundedCornerShape(8.dp)) {
-                        Text(text = plugin.category, color = TextSecondary, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
-                    }
-                    Surface(color = SurfaceVariantDark, shape = RoundedCornerShape(8.dp)) {
-                        Text(text = plugin.version, color = TextSecondary, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                        val tagText = when {
+                            plugin.id.startsWith("@") -> "INIT"
+                            plugin.isCommand -> "CMD"
+                            else -> "EVT"
+                        }
+                        Text(text = tagText, color = TextSecondary, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), fontWeight = FontWeight.Bold)
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(TablerIcons.DotsVertical, contentDescription = "More", tint = TextSecondary, modifier = Modifier.size(16.dp))
+                    Icon(TablerIcons.ChevronRight, contentDescription = "More", tint = TextSecondary, modifier = Modifier.size(16.dp))
                 }
             }
         }
@@ -192,6 +200,7 @@ fun PluginListItem(plugin: PluginEntity, onClick: () -> Unit, onToggle: (Boolean
 
 @Composable
 fun PluginDetailScreen(plugin: PluginEntity, onBack: () -> Unit, onToggle: (Boolean) -> Unit) {
+    val context = LocalContext.current
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -202,14 +211,27 @@ fun PluginDetailScreen(plugin: PluginEntity, onBack: () -> Unit, onToggle: (Bool
                 .fillMaxWidth()
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Start
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             IconButton(onClick = onBack) {
                 Icon(TablerIcons.ArrowLeft, contentDescription = "Back", tint = Accent)
             }
+            androidx.compose.material3.Button(
+                onClick = { 
+                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(plugin.url))
+                    context.startActivity(intent)
+                },
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = SurfaceVariantDark, contentColor = Accent),
+                shape = RoundedCornerShape(8.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Icon(TablerIcons.Download, contentDescription = "Descargar", tint = Accent, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Descargar", color = Accent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
         }
         
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+        LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp).animateContentSize()) {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
@@ -224,7 +246,15 @@ fun PluginDetailScreen(plugin: PluginEntity, onBack: () -> Unit, onToggle: (Bool
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(text = plugin.name, color = Accent, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = plugin.name, 
+                                color = Accent, 
+                                fontSize = 28.sp, 
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(text = plugin.version, color = TextSecondary, fontSize = 14.sp)
                             Spacer(modifier = Modifier.width(8.dp))
@@ -254,11 +284,15 @@ fun PluginDetailScreen(plugin: PluginEntity, onBack: () -> Unit, onToggle: (Bool
             item {
                 Text(text = "Información", color = Accent, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(16.dp))
-                InfoCard("command", plugin.isCommand.toString())
-                InfoCard("usePrefix", plugin.usePrefix.toString())
-                InfoCard("case", "[${plugin.cases}]")
-                InfoCard("category", plugin.category)
-                InfoCard("description", plugin.description)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    InfoCard("command", plugin.isCommand.toString(), modifier = Modifier.weight(1f))
+                    InfoCard("usePrefix", plugin.usePrefix.toString(), modifier = Modifier.weight(1f))
+                }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    InfoCard("case", "[${plugin.cases}]", modifier = Modifier.weight(1f))
+                    InfoCard("category", plugin.category, modifier = Modifier.weight(1f))
+                }
+                InfoCard("description", plugin.description, modifier = Modifier.fillMaxWidth())
                 
                 Spacer(modifier = Modifier.height(24.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -300,12 +334,12 @@ fun StatBox(label: String, value: String) {
 }
 
 @Composable
-fun InfoCard(label: String, value: String) {
+fun InfoCard(label: String, value: String, modifier: Modifier = Modifier) {
     Surface(
         color = SurfaceDark,
         shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, SurfaceVariantDark.copy(alpha = 0.5f)),
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)
+        modifier = modifier.padding(vertical = 6.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = label, color = TextSecondary, fontSize = 12.sp)

@@ -18,6 +18,7 @@ data class PluginEntity(
     val license: String = "MIT",
     val author: String = "Aethero",
     val version: String = "v1.0.0",
+    val url: String = "",
     val lastUpdated: Long = System.currentTimeMillis()
 )
 
