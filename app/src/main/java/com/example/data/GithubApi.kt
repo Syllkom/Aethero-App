@@ -45,7 +45,7 @@ object GithubApi {
                     val deferreds = chunk.map { path ->
                         async {
                             try {
-                                val isEvent = path.startsWith("events/")
+                                val isEvent = path.contains("/events/")
                                 val fileName = path.substringAfterLast("/")
                                 val isInit = fileName.startsWith("@")
                                 

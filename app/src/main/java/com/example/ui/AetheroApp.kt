@@ -56,6 +56,8 @@ fun AetheroApp(viewModel: MainViewModel) {
                 composable("plugins") { PluginsScreen(viewModel, navController) }
                 composable("docs") { DocsScreen(navController) }
                 composable("editor") { EditorScreen(navController) }
+                composable("precios") { com.example.ui.screens.PricingScreen(navController) }
+                composable("creator_stats") { com.example.ui.screens.CreatorStatsScreen(navController) }
             }
         }
     }
@@ -66,6 +68,7 @@ fun AetheroBottomBar(navController: NavController) {
     val items = listOf(
         Pair("dashboard", Pair(TablerIcons.Home, "Inicio")),
         Pair("plugins", Pair(TablerIcons.Puzzle, "Plugins")),
+        Pair("precios", Pair(TablerIcons.CurrencyDollar, "Precios")),
         Pair("docs", Pair(TablerIcons.FileText, "Docs")),
         Pair("editor", Pair(TablerIcons.Code, "Editor"))
     )

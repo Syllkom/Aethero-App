@@ -31,6 +31,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.clickable
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.ui.platform.LocalContext
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 import com.example.R
 import com.example.ui.MainViewModel
 import com.example.data.PluginEntity
@@ -53,6 +59,8 @@ fun DashboardScreen(viewModel: MainViewModel, navController: NavController) {
     ) {
         item { Spacer(modifier = Modifier.height(24.dp)) }
         item { HeaderArea() }
+        item { Spacer(modifier = Modifier.height(24.dp)) }
+        item { CreatorProfileCard(navController) }
         item { Spacer(modifier = Modifier.height(24.dp)) }
         item { RepoStatusCard(onSync = { viewModel.forceSync() }, lastSyncTime = lastSyncTime) }
         item { Spacer(modifier = Modifier.height(16.dp)) }
@@ -386,6 +394,47 @@ fun PluginRecentItem(plugin: PluginEntity) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(text = plugin.description, color = TextSecondary, fontSize = 12.sp, maxLines = 1)
             }
+        }
+    }
+}
+
+@Composable
+fun CreatorProfileCard(navController: NavController) {
+    Surface(
+        color = SurfaceDark,
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, SurfaceVariantDark.copy(alpha = 0.5f)),
+        shadowElevation = 8.dp,
+        modifier = Modifier.fillMaxWidth().clickable {
+            navController.navigate("creator_stats")
+        }
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AsyncImage(
+                    model = "https://avatars.githubusercontent.com/u/154283359?v=4",
+                    contentDescription = "Profile Picture",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(SurfaceVariantDark)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = "Syllkom", color = Accent, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text(text = "Creador • 9 seguidores", color = TextSecondary, fontSize = 14.sp)
+                }
+                Icon(TablerIcons.ChevronRight, contentDescription = "Stats", tint = TextSecondary)
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "La peor enfermedad es el aburrimiento", 
+                color = TextSecondary, 
+                fontSize = 14.sp, 
+                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                maxLines = 2
+            )
         }
     }
 }

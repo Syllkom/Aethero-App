@@ -108,9 +108,10 @@ fun PluginsScreen(viewModel: MainViewModel, navController: NavController) {
                 items(categories) { category ->
                     val isSelected = selectedCategory == category
                     Surface(
+                        onClick = { selectedCategory = category },
                         color = if (isSelected) Accent else SurfaceDark,
                         shape = RoundedCornerShape(20.dp),
-                        modifier = Modifier.clickable { selectedCategory = category }
+                        modifier = Modifier
                     ) {
                         Text(
                             text = category,
@@ -136,12 +137,14 @@ fun PluginsScreen(viewModel: MainViewModel, navController: NavController) {
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(filteredPlugins) { plugin ->
-                    PluginListItem(
-                        plugin = plugin,
-                        onClick = { selectedPluginId = plugin.id },
-                        onToggle = { isActive -> viewModel.togglePluginActive(plugin, isActive) }
-                    )
+                items(filteredPlugins, key = { it.id }) { plugin ->
+                    Box(modifier = Modifier.animateItem()) {
+                        PluginListItem(
+                            plugin = plugin,
+                            onClick = { selectedPluginId = plugin.id },
+                            onToggle = { isActive -> viewModel.togglePluginActive(plugin, isActive) }
+                        )
+                    }
                 }
             }
         }
@@ -151,13 +154,13 @@ fun PluginsScreen(viewModel: MainViewModel, navController: NavController) {
 @Composable
 fun PluginListItem(plugin: PluginEntity, onClick: () -> Unit, onToggle: (Boolean) -> Unit) {
     Surface(
+        onClick = onClick,
         color = SurfaceDark,
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(1.dp, SurfaceVariantDark.copy(alpha = 0.5f)),
         shadowElevation = 8.dp,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
             .animateContentSize()
     ) {
         Column(modifier = Modifier.padding(12.dp)) {

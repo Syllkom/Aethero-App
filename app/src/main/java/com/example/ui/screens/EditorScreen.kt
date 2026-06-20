@@ -36,8 +36,6 @@ data class FileNode(
 
 @Composable
 fun EditorScreen(navController: NavController) {
-    var selectedTab by remember { mutableStateOf("Código") }
-    val tabs = listOf("Código", "Metadata")
     val context = LocalContext.current
     
     // File tree state
@@ -143,40 +141,21 @@ fun EditorScreen(navController: NavController) {
                 Text(selectedFileNode?.name ?: "Explorador", color = Accent, fontSize = 16.sp)
                 Icon(if (treeExpanded) TablerIcons.ChevronUp else TablerIcons.ChevronDown, tint = TextSecondary, contentDescription = null)
             }
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                tabs.forEach { tab ->
-                    val isSelected = selectedTab == tab
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { selectedTab = tab },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = tab,
-                                color = if (isSelected) Accent else TextSecondary,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                            if (isSelected) {
-                                Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(Accent))
-                            }
-                        }
-                    }
-                }
-            }
         }
         
         Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
             if (treeExpanded) {
-                LazyColumn(
-                    modifier = Modifier
-                        .weight(0.4f)
-                        .fillMaxHeight()
-                        .background(SurfaceDark)
-                        .padding(8.dp)
+                Surface(
+                    color = SurfaceDark,
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, DividerColor),
+                    modifier = Modifier.weight(0.4f).fillMaxHeight().padding(end = 8.dp)
                 ) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(8.dp)
+                    ) {
                     if (isLoading) {
                         item {
                             Text("Cargando repositorio...", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.padding(8.dp))
@@ -223,6 +202,7 @@ fun EditorScreen(navController: NavController) {
                         }
                         rootNodes.forEach { renderNode(it, 0) }
                     }
+                }
                 }
             }
 
