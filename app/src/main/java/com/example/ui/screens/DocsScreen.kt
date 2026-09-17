@@ -234,7 +234,7 @@ fun DocsScreen(navController: NavController) {
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(12.dp)) {
-                                    Icon(InfoCircle, contentDescription = null, tint = if (isSelected) Color.Black else TextSecondary, modifier = Modifier.size(16.dp))
+                                    Icon(TablerIcons.InfoCircle, contentDescription = null, tint = if (isSelected) Color.Black else TextSecondary, modifier = Modifier.size(16.dp))
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         text = item.title,
