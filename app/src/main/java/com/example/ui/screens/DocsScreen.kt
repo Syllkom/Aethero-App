@@ -52,7 +52,7 @@ fun DocsScreen(navController: NavController) {
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             try {
-                val url = "https://raw.githubusercontent.com/Syllkom/HorekuOs-Landing-Page/refs/heads/main/src/pages/docs/DOCS.md"
+                val url = "https://raw.githubusercontent.com/Syllkom/Aethero/refs/heads/main/README.md"
                 val content = URL(url).readText()
                 
                 val parsedSections = mutableListOf<DocSection>()
@@ -103,7 +103,7 @@ fun DocsScreen(navController: NavController) {
                 isLoading = false
             } catch (e: Exception) {
                 isLoading = false
-                errorMessage = "No se pudo cargar DOCS.md dinámico: ${e.message}"
+                errorMessage = "No se pudo cargar README.md dinámico: ${e.message}"
             }
         }
     }
