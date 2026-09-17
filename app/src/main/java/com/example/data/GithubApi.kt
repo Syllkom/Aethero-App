@@ -16,7 +16,7 @@ object GithubApi {
         val plugins = mutableListOf<PluginEntity>()
         try {
             val ts = System.currentTimeMillis()
-            val url = URL("https://api.github.com/repos/Syllkom/HorekuOs/git/trees/aethero?recursive=1&t=$ts")
+            val url = URL("https://api.github.com/repos/Syllkom/Aethero/git/trees/aethero?recursive=1&t=$ts")
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
             connection.setRequestProperty("User-Agent", "Aethero-App")
@@ -54,7 +54,7 @@ object GithubApi {
                                     name = name.substringAfter(".")
                                 }
 
-                                val rawUrlStr = "https://raw.githubusercontent.com/Syllkom/HorekuOs/aethero/$path"
+                                val rawUrlStr = "https://raw.githubusercontent.com/Syllkom/Aethero/aethero/$path"
                                 val rawUrl = URL(rawUrlStr)
                                 val rawConn = rawUrl.openConnection() as HttpURLConnection
                                 rawConn.requestMethod = "GET"
@@ -85,7 +85,7 @@ object GithubApi {
                                             usages = Regex("['\"]([^'\"]+)['\"]").findAll(usageStr).map { it.groupValues[1] }.joinToString("|")
                                         }
                                     }
-                                    
+                                     
                                     PluginEntity(
                                         id = name,
                                         name = name,
@@ -118,7 +118,7 @@ object GithubApi {
     suspend fun fetchRawCommitActivity(): List<Int> = withContext(Dispatchers.IO) {
         try {
             val ts = System.currentTimeMillis()
-            val url = URL("https://api.github.com/repos/Syllkom/HorekuOs/commits?sha=aethero&t=$ts")
+            val url = URL("https://api.github.com/repos/Syllkom/Aethero/commits?sha=aethero&t=$ts")
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
             connection.setRequestProperty("User-Agent", "Aethero-App")
