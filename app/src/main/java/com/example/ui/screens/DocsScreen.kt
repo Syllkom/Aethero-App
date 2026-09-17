@@ -5,17 +5,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
-import compose.icons.TablerIcons
-import compose.icons.tablericons.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -23,6 +20,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.ui.theme.*
+import compose.icons.TablerIcons
+import compose.icons.tablericons.InfoCircle
+import compose.icons.tablericons.Search
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.URL
@@ -37,69 +37,104 @@ data class DocSubsection(
     var content: String = ""
 )
 
+private val fallbackReadmeUrls = listOf(
+    "https://raw.githubusercontent.com/Syllkom/Aethero/refs/heads/main/README.md",
+    "https://raw.githubusercontent.com/Syllkom/Aethero/main/README.md",
+    "https://raw.githubusercontent.com/Syllkom/Aethero-App/main/README.md"
+)
+
+private fun parseMarkdownSections(markdown: String): List<DocSection> {
+    val parsedSections = mutableListOf<DocSection>()
+    var currentSection: DocSection? = null
+    var currentSubsection: DocSubsection? = null
+    val currentContent = StringBuilder()
+
+    fun flushSubsection() {
+        if (currentSubsection != null) {
+            currentSubsection!!.content = currentContent.toString().trim()
+            currentContent.clear()
+        } else if (currentSection != null && currentContent.isNotBlank()) {
+            currentSection!!.subsections.add(0, DocSubsection("General", currentContent.toString().trim()))
+            currentContent.clear()
+        }
+    }
+
+    for (rawLine in markdown.lines()) {
+        val line = rawLine.trimEnd()
+
+        when {
+            line.startsWith("# ") && !line.startsWith("## ") -> {
+                flushSubsection()
+                currentSection = DocSection(line.removePrefix("# ").trim())
+                parsedSections.add(currentSection!!)
+                currentSubsection = null
+            }
+            line.startsWith("## ") -> {
+                flushSubsection()
+                if (currentSection == null) {
+                    currentSection = DocSection("Documentación")
+                    parsedSections.add(currentSection!!)
+                }
+                currentSubsection = DocSubsection(line.removePrefix("## ").trim())
+                currentSection!!.subsections.add(currentSubsection!!)
+            }
+            else -> {
+                if (currentSection == null && line.isNotBlank()) {
+                    currentSection = DocSection("Documentación")
+                    parsedSections.add(currentSection!!)
+                }
+                currentContent.append(line).append("\n")
+            }
+        }
+    }
+
+    if (currentSubsection != null) {
+        currentSubsection!!.content = currentContent.toString().trim()
+    } else if (currentSection != null && currentContent.isNotBlank()) {
+        currentSection!!.subsections.add(DocSubsection("General", currentContent.toString().trim()))
+    }
+
+    if (parsedSections.isEmpty()) {
+        return listOf(DocSection("Documentación", mutableListOf(DocSubsection("General", markdown.trim()))))
+    }
+
+    return parsedSections
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DocsScreen(navController: NavController) {
     var searchQuery by remember { mutableStateOf("") }
-    
+
     var sections by remember { mutableStateOf(listOf<DocSection>()) }
     var selectedSectionIndex by remember { mutableStateOf(0) }
     var selectedSubsectionIndex by remember { mutableStateOf(0) }
-    
+
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    
+
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             try {
-                val url = "https://raw.githubusercontent.com/Syllkom/Aethero/refs/heads/main/README.md"
-                val content = URL(url).readText()
-                
-                val parsedSections = mutableListOf<DocSection>()
-                var currentSection: DocSection? = null
-                var currentSubsection: DocSubsection? = null
-                val currentContent = StringBuilder()
-                
-                for (line in content.lines()) {
-                    if (line.startsWith("# ") && !line.startsWith("## ")) {
-                        if (currentSubsection != null) {
-                            currentSubsection.content = currentContent.toString()
-                            currentContent.clear()
-                        } else if (currentSection != null && currentContent.isNotBlank()) {
-                            // Add a default General section if there was text before the first ##
-                            currentSection.subsections.add(0, DocSubsection("General", currentContent.toString()))
-                            currentContent.clear()
-                        }
-                        
-                        currentSection = DocSection(line.removePrefix("# ").trim())
-                        parsedSections.add(currentSection)
-                        currentSubsection = null
-                    } else if (line.startsWith("## ")) {
-                        if (currentSubsection != null) {
-                            currentSubsection.content = currentContent.toString()
-                            currentContent.clear()
-                        } else if (currentSection == null) {
-                            currentSection = DocSection("Documentación")
-                            parsedSections.add(currentSection)
-                        } else if (currentContent.isNotBlank()) {
-                            currentSection.subsections.add(DocSubsection("General", currentContent.toString()))
-                            currentContent.clear()
-                        }
-                        
-                        currentSubsection = DocSubsection(line.removePrefix("## ").trim())
-                        currentSection!!.subsections.add(currentSubsection)
-                    } else {
-                        currentContent.append(line).append("\n")
+                var content: String? = null
+                for (url in fallbackReadmeUrls) {
+                    try {
+                        content = URL(url).readText()
+                        break
+                    } catch (_: Exception) {
+                        // Try next fallback URL.
                     }
                 }
-                
-                if (currentSubsection != null) {
-                    currentSubsection.content = currentContent.toString()
-                } else if (currentSection != null && currentContent.isNotBlank()) {
-                    currentSection.subsections.add(DocSubsection("General", currentContent.toString()))
+
+                if (content == null) {
+                    throw IllegalStateException("No se pudo cargar el README desde ninguna URL disponible.")
                 }
-                
-                sections = parsedSections
+
+                sections = parseMarkdownSections(content)
+                if (sections.isNotEmpty()) {
+                    selectedSectionIndex = 0
+                    selectedSubsectionIndex = 0
+                }
                 isLoading = false
             } catch (e: Exception) {
                 isLoading = false
@@ -134,8 +169,7 @@ fun DocsScreen(navController: NavController) {
                 shape = RoundedCornerShape(25.dp)
             )
             Spacer(modifier = Modifier.height(16.dp))
-            
-            // Dynamic Tabs (Pills)
+
             Row(
                 modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -165,7 +199,7 @@ fun DocsScreen(navController: NavController) {
             Spacer(modifier = Modifier.height(16.dp))
             HorizontalDivider(color = SurfaceVariantDark)
         }
-        
+
         Row(modifier = Modifier.fillMaxSize()) {
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -178,8 +212,7 @@ fun DocsScreen(navController: NavController) {
             } else if (sections.isNotEmpty()) {
                 val currentSection = sections[selectedSectionIndex]
                 val subsections = currentSection.subsections
-                
-                // Sidebar
+
                 LazyColumn(
                     modifier = Modifier
                         .weight(0.4f)
@@ -201,7 +234,7 @@ fun DocsScreen(navController: NavController) {
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(12.dp)) {
-                                    Icon(TablerIcons.InfoCircle, contentDescription = null, tint = if (isSelected) Color.Black else TextSecondary, modifier = Modifier.size(16.dp))
+                                    Icon(InfoCircle, contentDescription = null, tint = if (isSelected) Color.Black else TextSecondary, modifier = Modifier.size(16.dp))
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         text = item.title,
@@ -214,10 +247,9 @@ fun DocsScreen(navController: NavController) {
                         }
                     }
                 }
-                
-                // Content
+
                 val selectedSubsection = if (subsections.isNotEmpty()) subsections[selectedSubsectionIndex] else null
-                
+
                 LazyColumn(
                     modifier = Modifier
                         .weight(0.6f)
@@ -229,7 +261,7 @@ fun DocsScreen(navController: NavController) {
                             Text(text = selectedSubsection.title, color = Accent, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                             Spacer(modifier = Modifier.height(16.dp))
                         }
-                        
+
                         val paragraphs = selectedSubsection.content.split("\n\n")
                         items(paragraphs) { paragraph ->
                             if (paragraph.isNotBlank()) {
@@ -261,9 +293,9 @@ fun DocsScreen(navController: NavController) {
                             Text("Esta sección no tiene contenido.", color = TextSecondary)
                         }
                     }
-                    
+
                     item {
-                        Spacer(modifier = Modifier.height(48.dp)) // padding at bottom
+                        Spacer(modifier = Modifier.height(48.dp))
                     }
                 }
             }
